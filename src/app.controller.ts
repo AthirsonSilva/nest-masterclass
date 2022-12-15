@@ -1,13 +1,15 @@
-import { Controller, Get, Post } from '@nestjs/common'
+import { Body, Controller, Get, Post } from '@nestjs/common'
 import { team_member } from '@prisma/client'
 import { AppService } from './app.service'
 import { PrismaService } from './database/prisma.service'
+import { CreateTeamMemberBody } from './dtos/createTeamMemberBody'
+import { MembersRepositories } from './repositories/membersRepository'
 
 @Controller()
 export class AppController {
 	constructor(
 		private readonly appService: AppService,
-		private prisma: PrismaService,
+		private membersRepositories: MembersRepositories,
 	) {}
 
 	@Get()
@@ -16,17 +18,22 @@ export class AppController {
 	}
 
 	@Post('store')
-	async createMember(): Promise<team_member> {
+	async createMember(
+		@Body() body: CreateTeamMemberBody,
+	): Promise<team_member> {
 		try {
-			return await this.prisma.team_member.create({
-				data: {
-					id: '1',
-					name: 'John Doe',
-					function: 'Programmer',
-				},
-			})
+			if (!body.name || !body.function) {
+				throw new Error('Missing name or function')
+			}
+
+			const newMember = await this.membersRepositories.create(
+				body.name,
+				body.function,
+			)
+
+			return newMember
 		} catch (e) {
-			return e.message
+			throw new Error(e)
 		}
 	}
 }
